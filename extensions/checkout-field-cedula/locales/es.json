@@ -1,0 +1,5 @@
+{
+    "cedula": "Número de cédula",
+    "validateIsNumber": "Ingrese un número de cédula válido",
+    "required": "Ingrese una cédula"
+}  
