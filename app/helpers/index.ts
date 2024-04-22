@@ -1,5 +1,5 @@
 export const dateNow = () => {
-    return  new Date().toLocaleDateString('en-US', {
+    return  new Date().toLocaleDateString('es-US', {
         day: 'numeric',
         month: '2-digit', 
         year: 'numeric',
