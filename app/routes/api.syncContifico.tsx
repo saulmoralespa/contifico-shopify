@@ -90,9 +90,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
                 productData = await contifico.createProduct(dataProduct);
             }
 
-            const price = productData?.pvp1 ?? 0;
+            const price = Number(productData?.pvp1) ?? 0;
+            const basePrice = (+price * quantity) - percentageDiscount;
 
-            subtotal += (+price * quantity) - percentageDiscount;
+            subtotal += basePrice;
 
             detalles = [
                 ...detalles,
@@ -103,7 +104,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
                     porcentaje_iva: tax?.ratePercentage,
                     porcentaje_descuento: percentageDiscount,
                     base_cero: 0.00,
-                    base_gravable: price,
+                    base_gravable: basePrice,
                     base_no_gravable: 0.00
                 }
             ]
@@ -119,7 +120,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
             subtotal_0: 0.0,
             subtotal_12: subtotal,
             iva: taxOrder.rate,
-            total: totalPriceSet.shopMoney.amount,
+            total: Number(totalPriceSet.shopMoney.amount),
             detalles
         };
 
