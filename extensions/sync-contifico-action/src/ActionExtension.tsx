@@ -108,6 +108,11 @@ function App() {
                     amount
                   }
                 }
+                originalUnitPriceSet {
+                  shopMoney {
+                    amount
+                  }
+                }
                 discountedTotalSet {
                   shopMoney {
                     amount
@@ -210,7 +215,6 @@ function App() {
     const status = dataResult?.success;
     setLoadingSync(false);
     setStatusSync(status);
-    console.log(dataResult);
 
     if(!status) return;
 

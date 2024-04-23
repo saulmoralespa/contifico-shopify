@@ -23,7 +23,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         }
 
         const { apiKey, apiToken } = config;
-        const { customer, lineItems, name:nameOrder, currentSubtotalPriceSet, subtotalPriceSet, totalPriceSet, taxLines } = await request.json();
+        const { customer, lineItems, name:nameOrder, totalPriceSet, taxLines } = await request.json();
         const { metafield, displayName, addresses, email:emailCustomer, phone } = customer;
         const { address1, address2, city, province} = addresses.pop();
 
@@ -57,10 +57,12 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         const items = lineItems.nodes  ?? [];
         const taxOrder = taxLines.pop();
         let detalles:any = [];
+        let subtotal = 0;
 
 
         for(const item of items){
-            const { sku, name, originalTotalSet, discountedTotalSet, totalDiscountSet, taxLines, product, quantity } = item;
+            const { sku, name, originalUnitPriceSet, discountedTotalSet, totalDiscountSet, taxLines, product, quantity } = item;
+            const percentageDiscount = totalDiscountSet.shopMoney.amount
             
             if(!sku) return;
 
@@ -76,7 +78,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
             }else {
                 let dataProduct = {
                     minimo: "0.0",
-                    pvp1: originalTotalSet.shopMoney.amount,
+                    pvp1: originalUnitPriceSet.shopMoney.amount,
                     pv2: discountedTotalSet.shopMoney.amount,
                     pvp3: discountedTotalSet.shopMoney.amount,
                     pvp4: discountedTotalSet.shopMoney.amount,
@@ -88,16 +90,20 @@ export const action = async ({ request }: ActionFunctionArgs) => {
                 productData = await contifico.createProduct(dataProduct);
             }
 
+            const price = productData?.pvp1 ?? 0;
+
+            subtotal += (+price * quantity) - percentageDiscount;
+
             detalles = [
                 ...detalles,
                 {
                     producto_id: productData?.id,
                     cantidad: quantity,
-                    precio: originalTotalSet.shopMoney.amount,
+                    precio: price,
                     porcentaje_iva: tax?.ratePercentage,
-                    porcentaje_descuento: totalDiscountSet.shopMoney.amount,
+                    porcentaje_descuento: percentageDiscount,
                     base_cero: 0.00,
-                    base_gravable: originalTotalSet.shopMoney.amount,
+                    base_gravable: price,
                     base_no_gravable: 0.00
                 }
             ]
@@ -110,16 +116,14 @@ export const action = async ({ request }: ActionFunctionArgs) => {
             estado: "P",
             cliente,
             descripcion: `Prefactura pedido ${nameOrder}`,
-            subtotal_0: currentSubtotalPriceSet.shopMoney.amount,
-            subtotal_12: subtotalPriceSet.shopMoney.amount,
+            subtotal_0: 0.0,
+            subtotal_12: subtotal,
             iva: taxOrder.rate,
             total: totalPriceSet.shopMoney.amount,
             detalles
         };
 
-
         console.log(document);
-
 
         const resultDocument = await contifico.createDocument(document);
         console.log(resultDocument);

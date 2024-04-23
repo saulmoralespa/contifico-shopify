@@ -37,6 +37,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
   let {id, ...data} = body;
   id = typeof id !== "number" ? parseInt(id) : id;
+  let message;
 
   try {
       if(!id){
@@ -47,12 +48,17 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           data
         });
       }
-    } catch (error){
-      throw error
-    }
+      message = {
+        success: true
+      }
+    } catch (error:any){
+      message = {
+        success: true,
+        error: error?.message
+      }
+  }
 
-
-  return null;
+  return json(message);
 };
 
 export default function Index() {
@@ -128,7 +134,7 @@ export default function Index() {
                     <span>API Token previamente solicitada a contífico</span>
                   }
                 ></TextField>
-                <Button submit>Guardar Cambios</Button>
+                <Button loading={loading} submit>Guardar Cambios</Button>
               </FormLayout>
             </Form>
           </Layout.Section>
