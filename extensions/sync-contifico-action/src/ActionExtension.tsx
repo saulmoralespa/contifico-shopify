@@ -150,10 +150,12 @@ function App() {
                 firstName
                 lastName
               }
-              metafield(key: "custom.identification"){
-                key
+              metafieldTypePerson: metafield(key: "custom.typeIdentification"){
                 value
-              } 
+              }
+              metafieldIdentification: metafield(key: "custom.identification"){
+                value
+              }
             }
             displayAddress {
               address1
@@ -183,7 +185,7 @@ function App() {
         const { customAttributes, customer } = order;
         const attributeDocumentId = customAttributes.find((attr:any) => attr.key === "document-id-contifico");
         const status = attributeDocumentId !== undefined && Object.keys(attributeDocumentId).length > 0;
-        const metafieldIdentification = customer?.metafield?.value ?? null;
+        const metafieldIdentification = customer?.metafieldIdentification?.value ?? null;
         setOrderData(order);
         setStatusSync(status);
         setIdentification(metafieldIdentification);
