@@ -8,8 +8,18 @@ import { dateNow } from "~/helpers";
 
 export const action = async ({ request }: ActionFunctionArgs) => {
     
-    if (request.method !== "POST") {
-        return json({ message: "Method not allowed" }, 405);
+    const headers = {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type",
+    };
+
+    if (request.method === 'OPTIONS') {
+        return json({
+          status: 200,
+          headers,
+          message: "Method not allowed"
+        });
     }
 
     try {
