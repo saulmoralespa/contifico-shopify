@@ -1,27 +1,24 @@
-import type { ActionFunctionArgs } from "@remix-run/node";
+import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
+import { cors } from "remix-utils/cors";
 import { authenticate } from "../shopify.server";
 import { getContifico } from "~/models/Contifico.server";
 import clientContifico from '~/lib';
 import { dateNow } from "~/helpers";
 
 
+export const loader = async ({ request }: LoaderFunctionArgs) => {
+	let response = json({});
+	return await cors(request, response);
+};
+
 export const action = async ({ request }: ActionFunctionArgs) => {
-    
-    const headers = {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type",
-    };
+
 
     if (request.method === 'OPTIONS') {
-        return json({
-          status: 200,
-          headers,
-          message: "Method not allowed"
-        });
+        return json({message: "Method not allowed"}, 405);
     }
-
+     
     try {
         const { session } = await authenticate.admin(request);
         const { shop } = session;
