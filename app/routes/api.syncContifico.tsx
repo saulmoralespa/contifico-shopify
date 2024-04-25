@@ -15,10 +15,12 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 export const action = async ({ request }: ActionFunctionArgs) => {
 
 
-    if (request.method === 'OPTIONS') {
-        return json({message: "Method not allowed"}, 405);
+    let response = json({message: "Method not allowed"}, 405);
+
+    if (request.method !== 'POST') {
+        return await cors(request, response);
     }
-     
+
     try {
         const { session } = await authenticate.admin(request);
         const { shop } = session;
@@ -136,11 +138,13 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
         const resultDocument = await contifico.createDocument(document);
         console.log(resultDocument);
-        return json({ success: true }, 200);
+        response = json({ success: true, message: ''}, 200);
 
     } catch (error:any) {
         const errorMessage = error?.response?.data || error;
         const status = error?.response?.status;
-        return json({ success: false, ...errorMessage }, status);
+        response = json({ success: false, ...errorMessage }, status);
     }
+
+    return await cors(request, response);
 };
