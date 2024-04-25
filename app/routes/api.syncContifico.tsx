@@ -24,21 +24,22 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
         const { apiKey, apiToken } = config;
         const { customer, lineItems, name:nameOrder, totalPriceSet, taxLines } = await request.json();
-        const { metafield, displayName, addresses, email:emailCustomer, phone } = customer;
+        const { metafieldTypePerson, metafieldIdentification, displayName, addresses, email:emailCustomer, phone } = customer;
         const { address1, address2, city, province} = addresses.pop();
 
-        const metafieldIdentification = metafield?.value ?? null;
+        const typePerson = JSON.parse(metafieldTypePerson?.value).pop() ?? null;
+        const identification = metafieldIdentification?.value ?? null;
 
         const contifico = clientContifico(apiKey);
         const params = new URLSearchParams();
-        params.append('identificacion', metafieldIdentification);
+        params.append('identificacion', identification);
         const query =  `?${params.toString()}`;
         let resultPeople = await contifico.getPeople(query);
         let cliente;
         
         if(!resultPeople.length){
             cliente = {
-                tipo: "N",  //N:Natural J:Juridica I:SinId P:Placa)
+                tipo: typePerson === 'Juridica' ? 'J' : 'N',  //N:Natural J:Juridica I:SinId P:Placa)
                 razon_social: displayName,
                 telefonos: phone,
                 direccion: `${address1} ${address2}, ${city}, ${province}`,
@@ -62,9 +63,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
         for(const item of items){
             const { sku, name, originalUnitPriceSet, discountedTotalSet, totalDiscountSet, taxLines, product, quantity } = item;
-            const percentageDiscount = totalDiscountSet.shopMoney.amount
+            const percentageDiscount = totalDiscountSet.shopMoney.amount;
             
-            if(!sku) return;
+            if(!sku) throw Error(`Product ${name} without sku`);
 
             const params = new URLSearchParams();
             params.append('codigo', sku);
@@ -131,7 +132,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         return json({ success: true }, 200);
 
     } catch (error:any) {
-        const errorMessage = error?.response?.data;
+        const errorMessage = error?.response?.data || error;
         const status = error?.response?.status;
         return json({ success: false, ...errorMessage }, status);
     }
