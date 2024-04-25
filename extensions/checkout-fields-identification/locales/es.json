@@ -1,0 +1,8 @@
+{
+    "cedula": "Número de cédula",
+    "ruc": "RUC",
+    "typePerson": " Tipo de persona",
+    "validateIsNumber": "Ingrese un número de {{document}} válido",
+    "requiredCedula": "Ingrese una cédula",
+    "requiredRuc": "Ingrese un RUC"
+}  
