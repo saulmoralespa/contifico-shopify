@@ -256,6 +256,7 @@ function App() {
       primaryAction={
         identification && (
           <Button
+            disabled={statusSync}
             onPress={() => {
               sync()
             }}
