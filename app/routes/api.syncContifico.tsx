@@ -36,8 +36,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         const { metafieldTypePerson, metafieldIdentification, displayName, addresses, email:emailCustomer, phone } = customer;
         const { address1, address2, city, province} = addresses.pop();
 
-        const typePersonValue = metafieldTypePerson.value ? JSON.parse(metafieldTypePerson.value) : null;
-        const typePerson = Array.isArray(typePersonValue) ? typePersonValue.pop() : null;
+        const typePersonValue = metafieldTypePerson?.value ? JSON.parse(metafieldTypePerson.value) : null;
+        const typePerson = Array.isArray(typePersonValue) ? typePersonValue?.pop() : null;
         const identification = metafieldIdentification?.value ?? null;
 
         const contifico = clientContifico(apiKey);
@@ -57,7 +57,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
                 es_vendedor: false,
                 es_proveedor: false,
                 es_extranjero: false,
-                cedula: metafieldIdentification,
+                cedula: identification,
                 email: emailCustomer,
             };
             await contifico.createPerson(apiToken, cliente);
