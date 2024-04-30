@@ -135,7 +135,10 @@ function App() {
                 }
               }
             }
-             customer {
+            shippingLine {
+              code
+            }
+            customer {
               firstName
               lastName
               displayName
@@ -150,10 +153,10 @@ function App() {
                 firstName
                 lastName
               }
-              metafieldTypePerson: metafield(key: "custom.typeIdentification"){
+              metafieldTypePerson: metafield(key: "adv_reg.typeIdentification"){
                 value
               }
-              metafieldIdentification: metafield(key: "custom.identification"){
+              metafieldIdentification: metafield(key: "adv_reg.identification"){
                 value
               }
             }
