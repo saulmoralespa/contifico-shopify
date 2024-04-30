@@ -37,11 +37,11 @@ sms_marketing = true
 customer_privacy = true
 
 [[extensions.metafields]]
-namespace = "custom"
-key = "identification"
-[[extensions.metafields]]
-namespace = "custom"
+namespace = "adv_reg"
 key = "typeIdentification"
+[[extensions.metafields]]
+namespace = "adv_reg"
+key = "identification"
 
 # Defines settings that will be collected from merchants installing
 # your extension. Learn more:
