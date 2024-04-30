@@ -6,3 +6,14 @@ export const dateNow = () => {
         timeZone: 'America/Guayaquil'
     });
 }
+
+export const generateCodeShipping = (text:string) => {
+    return text
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toUpperCase()
+        .replace(/[^\w\s]|_/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/--+/g, '-')
+        .replace(/\s+$/g, '');
+}
