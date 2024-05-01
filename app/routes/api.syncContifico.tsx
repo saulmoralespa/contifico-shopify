@@ -4,7 +4,7 @@ import { cors } from "remix-utils/cors";
 import { authenticate } from "../shopify.server";
 import { getContifico } from "~/models/Contifico.server";
 import clientContifico from '~/lib';
-import { dateNow } from "~/helpers";
+import { dateNow, extractCedula, generateCodeShipping } from "~/helpers";
 
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -32,13 +32,18 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         }
 
         const { apiKey, apiToken } = config;
-        const { customer, lineItems, name:nameOrder, totalPriceSet, taxLines } = await request.json();
+        const { customer, lineItems, shippingLine, name:nameOrder, totalPriceSet, taxLines } = await request.json();
         const { metafieldTypePerson, metafieldIdentification, displayName, addresses, email:emailCustomer, phone } = customer;
+        const { code:codeShipping } = shippingLine;
         const { address1, address2, city, province} = addresses.pop();
 
-        const typePersonValue = metafieldTypePerson?.value ? JSON.parse(metafieldTypePerson.value) : null;
-        const typePerson = Array.isArray(typePersonValue) ? typePersonValue?.pop() : null;
-        const identification = metafieldIdentification?.value ?? null;
+        const typePerson = metafieldTypePerson?.value ?? null;
+        const identification = metafieldIdentification?.value ? extractCedula(metafieldIdentification?.value) :  '';
+
+
+        if(!identification){
+            throw Error('No se ha recibido Cédula o RUC');
+        }
 
         const contifico = clientContifico(apiKey);
         const params = new URLSearchParams();
@@ -67,13 +72,15 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         }
         const items = lineItems.nodes  ?? [];
         const taxOrder = taxLines.pop();
+        const shippingItemCode = codeShipping ? generateCodeShipping(codeShipping) : null;
         let detalles:any = [];
         let subtotal = 0;
+        let ratePercentage = 0;
 
 
         for(const item of items){
-            const { sku, name, originalUnitPriceSet, discountedTotalSet, totalDiscountSet, taxLines, product, quantity } = item;
-            const percentageDiscount = totalDiscountSet.shopMoney.amount;
+            const { sku, name, originalUnitPriceSet, discountedTotalSet, taxLines, product, quantity } = item;
+            //const totalDiscount = totalDiscountSet.shopMoney.amount;
             
             if(!sku) throw Error(`Product ${name} without sku`);
 
@@ -102,9 +109,15 @@ export const action = async ({ request }: ActionFunctionArgs) => {
             }
 
             const price = Number(productData?.pvp1) ?? 0;
+            ratePercentage = Number(tax?.ratePercentage) ?? 0;
+            const percentageDiscount = 0.00;
             const basePrice = (+price * quantity) - percentageDiscount;
 
-            subtotal += basePrice;
+            subtotal += ratePercentage ? basePrice : 0;
+            
+            const base_gravable = ratePercentage > 12 ?  (basePrice - ((percentageDiscount / 100 ) * basePrice)) : 0.00;
+            const base_cero = base_gravable ? 0.00 : basePrice;
+            const base_no_gravable = ratePercentage > 12 ? 0.00 : (basePrice - ((percentageDiscount / 100 ) * basePrice));
 
             detalles = [
                 ...detalles,
@@ -114,11 +127,47 @@ export const action = async ({ request }: ActionFunctionArgs) => {
                     precio: price,
                     porcentaje_iva: tax?.ratePercentage,
                     porcentaje_descuento: percentageDiscount,
-                    base_cero: 0.00,
-                    base_gravable: basePrice,
-                    base_no_gravable: 0.00
+                    base_cero,
+                    base_gravable,
+                    base_no_gravable
                 }
             ]
+        }
+
+        if(shippingItemCode){
+            const params = new URLSearchParams();
+            params.append('codigo', shippingItemCode);
+            const query =  `?${params.toString()}`;
+
+            let resultProduct = await contifico.getProducts(query);
+            let productData = resultProduct?.length && Array.isArray(resultProduct) ? resultProduct?.pop() : null;
+
+            if(productData){
+                const price = Number(productData?.pvp1) ?? 0;
+                const porcentajeIva = Number(productData?.porcentaje_iva) ?? 0;
+                const basePrice = +price;
+
+                subtotal += porcentajeIva ? basePrice : 0;
+                const base_gravable = porcentajeIva > 12 ?  basePrice : 0.00;
+                const base_cero = base_gravable ? 0.00 : basePrice;
+                const base_no_gravable = ratePercentage > 12 ? 0.00 : basePrice;
+
+
+                detalles = [
+                    ...detalles,
+                    {
+                        producto_id: productData?.id,
+                        cantidad: 1.0,
+                        precio: price,
+                        porcentaje_iva: productData?.porcentaje_iva,
+                        porcentaje_descuento: 0,
+                        base_cero,
+                        base_gravable,
+                        base_no_gravable
+                    }
+                ]
+
+            }
         }
 
         const document = {
@@ -135,10 +184,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
             detalles
         };
 
-        console.log(document);
-
-        const resultDocument = await contifico.createDocument(document);
-        console.log(resultDocument);
+        await contifico.createDocument(document);
         response = json({ success: true, message: ''}, 200);
 
     } catch (error:any) {
