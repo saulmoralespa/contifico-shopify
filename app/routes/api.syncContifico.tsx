@@ -184,8 +184,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
             detalles
         };
 
-        await contifico.createDocument(document);
-        response = json({ success: true, message: ''}, 200);
+        const { documento } = await contifico.createDocument(document);
+        response = json({ success: true, message: `Número de documento creado: ${documento}`, documento}, 200);
 
     } catch (error:any) {
         const errorMessage = error?.response?.data || error;
