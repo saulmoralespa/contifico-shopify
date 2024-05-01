@@ -17,3 +17,11 @@ export const generateCodeShipping = (text:string) => {
         .replace(/--+/g, '-')
         .replace(/\s+$/g, '');
 }
+
+export const extractCedula = (identification:string) => {
+    if (identification.endsWith("001")) {
+        return Math.floor(+identification / 1000).toString();
+    } else {
+        return identification;
+    }
+}
