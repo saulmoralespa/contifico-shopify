@@ -21,6 +21,7 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [loadingSync, setLoadingSync] = useState(false);
   const [statusSync, setStatusSync] = useState(false);
+  const [documento, setDocument] = useState('');
   // Use direct API calls to fetch data from Shopify.
   // See https://shopify.dev/docs/api/admin-graphql for more information about Shopify's GraphQL API
   useEffect(() => {
@@ -217,9 +218,10 @@ function App() {
       }
     );
     const dataResult = await res.json();
-    const status = dataResult?.success;
+    const { status, documento }  = dataResult;
     setLoadingSync(false);
     setStatusSync(status);
+    setDocument(documento);
 
     if(!status) return;
 
@@ -237,7 +239,7 @@ function App() {
           customAttributes: [
             {
               key: "document-id-contifico",
-              value: "true"
+              value: documento
             }
           ],
           id: data.selected[0].id
@@ -283,7 +285,11 @@ function App() {
         {
           !loading && (
             statusSync ?  (
-              <Text fontWeight="bold">Esta orden ya se encuentra sincronizada</Text>
+              <Text fontWeight="bold">
+                {
+                  documento ? `Orden sincronizada, número de documento: ${documento}` : `Esta orden ya se encuentra sincronizada`
+                }
+              </Text>
             ) : 
             !identification ? (
               <Text fontWeight="bold">La sincronización de esta orden con Contifico no es posible debido a la ausencia del número de documento del cliente.</Text>
