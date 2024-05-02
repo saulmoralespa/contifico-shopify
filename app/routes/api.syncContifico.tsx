@@ -4,7 +4,7 @@ import { cors } from "remix-utils/cors";
 import { authenticate } from "../shopify.server";
 import { getContifico } from "~/models/Contifico.server";
 import clientContifico from '~/lib';
-import { dateNow, extractCedula, generateCodeShipping } from "~/helpers";
+import { dateNow, extractCedula, generateCodeShipping, nextConsecutive } from "~/helpers";
 
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -22,13 +22,16 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     }
 
     try {
+        const exception = new Error();
         const { session } = await authenticate.admin(request);
         const { shop } = session;
 
         const config = await getContifico(shop);
 
         if (!config) {
-            throw Error('No se han establecido el apiKey, apiToken de contifico');
+            exception.name = 'NotFoundValue';
+            exception.message = `No se han establecido el apiKey, apiToken de contifico`;
+            throw exception;
         }
 
         const { apiKey, apiToken } = config;
@@ -42,7 +45,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
 
         if(!identification){
-            throw Error('No se ha recibido Cédula o RUC');
+            exception.name = 'NotFoundValue';
+            exception.message = `No se ha recibido Cédula o RUC`;
+            throw exception;
         }
 
         const contifico = clientContifico(apiKey);
@@ -82,7 +87,11 @@ export const action = async ({ request }: ActionFunctionArgs) => {
             const { sku, name, originalUnitPriceSet, discountedTotalSet, taxLines, product, quantity } = item;
             //const totalDiscount = totalDiscountSet.shopMoney.amount;
             
-            if(!sku) throw Error(`Product ${name} without sku`);
+            if(!sku) {
+                exception.name = 'NotFoundValue';
+                exception.message = `Product ${name} without sku`;
+                throw exception;
+            }
 
             const params = new URLSearchParams();
             params.append('codigo', sku);
@@ -170,27 +179,44 @@ export const action = async ({ request }: ActionFunctionArgs) => {
             }
         }
 
+        const paramsDocument = new URLSearchParams();
+        paramsDocument.append('result_size', '1');
+        paramsDocument.append('tipo', 'FAC');
+        const queryDocument =  `?result_size=1&tipo=FAC`;
+
+        const lastDocumentCreated = await contifico.getDocuments(queryDocument);
+        const { documento:documentLast }:any = lastDocumentCreated.length ? lastDocumentCreated.pop() : '';
+
+        if(!documentLast){
+            exception.message = `No se pudo obtener el último documento`;
+            throw exception;
+        }
+
+        const newNumberSerie = nextConsecutive(documentLast);
+
         const document = {
             pos: apiToken,
             fecha_emision: dateNow(),
-            tipo_documento: "PRE", //FAC factura
+            tipo_documento: "FAC", //FAC factura
+            documento: newNumberSerie,
             estado: "P",
+            electronico: true,
             cliente,
-            descripcion: `Prefactura pedido ${nameOrder}`,
+            descripcion: `Número de pedido ${nameOrder}`,
             subtotal_0: 0.0,
             subtotal_12: subtotal,
             iva: taxOrder.rate,
             total: Number(totalPriceSet.shopMoney.amount),
             detalles
         };
-
+ 
         const { documento } = await contifico.createDocument(document);
         response = json({ success: true, message: `Número de documento creado: ${documento}`, documento}, 200);
 
     } catch (error:any) {
-        const errorMessage = error?.response?.data || error;
+        const message = error?.response?.data || error.message;
         const status = error?.response?.status;
-        response = json({ success: false, ...errorMessage }, status);
+        response = json({ success: false, message }, status);
     }
 
     return await cors(request, response);
