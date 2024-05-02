@@ -1,4 +1,6 @@
 import {useEffect, useState} from 'react';
+import { GET_ORDER_BY_ID_QUERY } from '../../../app/graphql/queries/getOrderById';
+import { ORDER_CUSTOM_ATTRIBUTE_CREATE } from '../../../app/graphql/mutations/orderCustomAttributeCreate';
 import {
   reactExtension,
   useApi,
@@ -22,155 +24,13 @@ function App() {
   const [loadingSync, setLoadingSync] = useState(false);
   const [statusSync, setStatusSync] = useState(false);
   const [documento, setDocument] = useState('');
+  const [messageResult, setMessageResult] = useState('');
   // Use direct API calls to fetch data from Shopify.
   // See https://shopify.dev/docs/api/admin-graphql for more information about Shopify's GraphQL API
   useEffect(() => {
     async function getOrderInfo() {
       const getDataQuery = {
-        query: `query Order($id: ID!) {
-          order(id: $id) {
-             name
-             phone
-             confirmed
-             unpaid
-             fullyPaid
-             canMarkAsPaid
-             cancelReason
-             currentSubtotalLineItemsQuantity
-             currentSubtotalPriceSet {
-              shopMoney {
-                amount
-              }
-            }
-            currentTaxLines {
-              priceSet {
-                shopMoney {
-                  amount
-                }
-              }
-            }
-            originalTotalAdditionalFeesSet{
-              shopMoney {
-                amount
-              }
-            }
-            originalTotalDutiesSet {
-              shopMoney {
-                amount
-              }
-            }
-            originalTotalPriceSet {
-              shopMoney {
-                amount
-              }
-            }
-            subtotalPriceSet {
-              shopMoney {
-                amount
-              }
-            }
-            totalDiscountsSet {
-              shopMoney {
-                amount
-              }
-            }
-            totalPriceSet {
-              shopMoney {
-                amount
-              }
-            }
-            taxLines {
-              priceSet {
-                shopMoney {
-                  amount
-                }
-              }
-              rate
-              ratePercentage
-            }
-            test
-            taxExempt
-            subtotalLineItemsQuantity
-            requiresShipping
-            billingAddressMatchesShippingAddress
-            displayFulfillmentStatus
-            lineItems(first: 100) {
-              nodes {
-                id
-                name
-                sku
-                currentQuantity,
-                quantity
-                product {
-                  totalInventory
-                }
-                originalTotalSet {
-                  shopMoney {
-                    amount
-                  }
-                }
-                originalUnitPriceSet {
-                  shopMoney {
-                    amount
-                  }
-                }
-                discountedTotalSet {
-                  shopMoney {
-                    amount
-                  }
-                }
-                totalDiscountSet {
-                  shopMoney {
-                    amount
-                  }
-                }
-                taxLines {
-                  priceSet {
-                    shopMoney {
-                      amount
-                    }
-                  }
-                  rate
-                  ratePercentage
-                  title
-                }
-              }
-            }
-            shippingLine {
-              code
-            }
-            customer {
-              firstName
-              lastName
-              displayName
-              email
-              phone
-              addresses {
-                address1
-                address2
-                country
-                province
-                city
-                firstName
-                lastName
-              }
-              metafieldTypePerson: metafield(key: "adv_reg.typeIdentification"){
-                value
-              }
-              metafieldIdentification: metafield(key: "adv_reg.identification"){
-                value
-              }
-            }
-            displayAddress {
-              address1
-              address2
-            }
-            customAttributes {
-              key
-              value
-            }
-          }
-        }`,
+        query: GET_ORDER_BY_ID_QUERY,
         variables: { id: data.selected[0].id },
       };
   
@@ -218,22 +78,16 @@ function App() {
       }
     );
     const dataResult = await res.json();
-    const { success, documento }  = dataResult;
+    const { success, documento, message }  = dataResult;
     setLoadingSync(false);
     setStatusSync(success);
     setDocument(documento);
+    setMessageResult(message);
 
     if(!success) return;
 
     const orderUpdate = {
-      query: `mutation orderUpdate($input: OrderInput!) {
-        orderUpdate(input: $input) {
-          userErrors {
-            field
-            message
-          }
-        }
-      }`,
+      query: ORDER_CUSTOM_ATTRIBUTE_CREATE,
       variables: { 
         input: {
           customAttributes: [
@@ -294,7 +148,11 @@ function App() {
             !identification ? (
               <Text fontWeight="bold">La sincronización de esta orden con Contifico no es posible debido a la ausencia del número de documento del cliente.</Text>
             ) : !loadingSync && !statusSync && (
-              <Text fontWeight="bold">¿ Desea sincronizar esta orden con Contifico ?</Text>
+              <Text fontWeight="bold">
+                {
+                  messageResult ? messageResult : `¿ Desea sincronizar esta orden con Contifico ?`
+                }
+              </Text>
             )
           )
         }
