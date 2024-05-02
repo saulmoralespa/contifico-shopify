@@ -218,12 +218,12 @@ function App() {
       }
     );
     const dataResult = await res.json();
-    const { status, documento }  = dataResult;
+    const { success, documento }  = dataResult;
     setLoadingSync(false);
-    setStatusSync(status);
+    setStatusSync(success);
     setDocument(documento);
 
-    if(!status) return;
+    if(!success) return;
 
     const orderUpdate = {
       query: `mutation orderUpdate($input: OrderInput!) {
