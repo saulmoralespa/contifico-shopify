@@ -25,3 +25,15 @@ export const extractCedula = (identification:string) => {
         return identification;
     }
 }
+
+export const nextConsecutive = (numberSerie:string) => {
+    const parts = numberSerie.split('-');
+    let lastNumero = +parts[2];
+    lastNumero += 1;
+
+    const newNumero = lastNumero.toString().padStart(9, '0');
+    parts[2] = newNumero;
+    const newNumberSerie = parts.join('-');
+
+    return newNumberSerie;
+}
