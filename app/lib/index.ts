@@ -178,10 +178,8 @@ function clientContifico(apiKey:string) {
         return data;
     }
 
-    const getDocuments = async(params = {}):Promise<Document[]> => {
-        const { data } = await client.get(`registro/documento`, {
-            params
-        });
+    const getDocuments = async(query:string = ''):Promise<[Document]> => {
+        const { data } = await client.get(`registro/documento/${query}`);
         return data;
     }
 
