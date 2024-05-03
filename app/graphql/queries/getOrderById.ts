@@ -1,6 +1,5 @@
-import gql from "graphql-tag";
 
-export const GET_ORDER_BY_ID_QUERY = gql`
+export const GET_ORDER_BY_ID_QUERY = `
   query Order($id: ID!) {
     order(id: $id) {
       name
