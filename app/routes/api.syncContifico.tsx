@@ -214,7 +214,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         response = json({ success: true, message: `Número de documento creado: ${documento}`, documento}, 200);
 
     } catch (error:any) {
-        const message = error?.response?.data || error.message;
+        const message = error?.response?.data?.mensaje || error.message;
         const status = error?.response?.status;
         response = json({ success: false, message }, status);
     }
