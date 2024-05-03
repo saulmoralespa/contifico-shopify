@@ -1,6 +1,6 @@
 -- CreateTable
 CREATE TABLE "Contifico" (
-    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "id" SERIAL PRIMARY KEY,
     "shop" TEXT NOT NULL,
     "apiKey" TEXT NOT NULL,
     "apiToken" TEXT
