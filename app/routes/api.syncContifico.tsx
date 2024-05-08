@@ -35,14 +35,13 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         }
 
         const { apiKey, apiToken } = config;
-        const { customer, lineItems, shippingLine, name:nameOrder, totalPriceSet, taxLines } = await request.json();
+        const { customer, lineItems, shippingLine, name:nameOrder } = await request.json();
         const { metafieldTypePerson, metafieldIdentification, displayName, addresses, email:emailCustomer, phone } = customer;
         const { code:codeShipping } = shippingLine;
         const { address1, address2, city, province} = addresses.pop();
 
         const typePerson = metafieldTypePerson?.value ?? null;
-        const identification = metafieldIdentification?.value ? extractCedula(metafieldIdentification?.value) :  '';
-
+        const identification = metafieldIdentification?.value ?? null;
 
         if(!identification){
             exception.name = 'NotFoundValue';
@@ -50,6 +49,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
             throw exception;
         }
 
+        const cedula = extractCedula(metafieldIdentification?.value);
         const contifico = clientContifico(apiKey);
         const params = new URLSearchParams();
         params.append('identificacion', identification);
@@ -67,7 +67,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
                 es_vendedor: false,
                 es_proveedor: false,
                 es_extranjero: false,
-                cedula: identification,
+                cedula,
                 email: emailCustomer,
             };
             await contifico.createPerson(apiToken, cliente);
@@ -76,7 +76,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
             cliente = {cedula, razon_social, telefonos, direccion, tipo, email, es_cliente, es_vendedor, es_proveedor, es_extranjero};
         }
         const items = lineItems.nodes  ?? [];
-        const taxOrder = taxLines.pop();
         const shippingItemCode = codeShipping ? generateCodeShipping(codeShipping) : null;
         let detalles:any = [];
         let subtotal = 0;
@@ -112,7 +111,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
                     nombre: name,
                     estado: "A",
                     codigo: sku,
-                    cantidad_stock: product.totalInventory.toString()
+                    cantidad_stock: product?.totalInventory?.toString() || quantity
                 };
                 productData = await contifico.createProduct(dataProduct);
             }
@@ -154,7 +153,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
             if(productData){
                 const price = Number(productData?.pvp1) ?? 0;
                 const porcentajeIva = Number(productData?.porcentaje_iva) ?? 0;
-                const basePrice = +price;
+                const basePrice = price < 1 ? 0 : +price;
+                const percentageDiscount = price < 1 ? 100 : 0.00;
 
                 subtotal += porcentajeIva ? basePrice : 0;
                 const base_gravable = porcentajeIva > 12 ?  basePrice : 0.00;
@@ -169,10 +169,12 @@ export const action = async ({ request }: ActionFunctionArgs) => {
                         cantidad: 1.0,
                         precio: price,
                         porcentaje_iva: productData?.porcentaje_iva,
-                        porcentaje_descuento: 0,
+                        porcentaje_descuento: percentageDiscount,
                         base_cero,
                         base_gravable,
-                        base_no_gravable
+                        base_no_gravable,
+                        porcentaje_ice:0.00,
+                        valor_ice:0.00
                     }
                 ]
 
@@ -192,6 +194,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
             throw exception;
         }
 
+        const valueIva = subtotal * (ratePercentage / 100);
+        const total = subtotal + valueIva;
         const newNumberSerie = nextConsecutive(documentLast);
 
         const document = {
@@ -200,13 +204,15 @@ export const action = async ({ request }: ActionFunctionArgs) => {
             tipo_documento: "FAC", //FAC factura
             documento: newNumberSerie,
             estado: "P",
+            autorizacion: "",
+            caja_id: null,
             electronico: true,
             cliente,
             descripcion: `Número de pedido ${nameOrder}`,
             subtotal_0: 0.0,
             subtotal_12: subtotal,
-            iva: taxOrder.rate,
-            total: Number(totalPriceSet.shopMoney.amount),
+            iva: Number(valueIva.toFixed(2)),
+            total:Number(total.toFixed(2)),
             detalles
         };
  
