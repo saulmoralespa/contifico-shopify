@@ -49,7 +49,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
             throw exception;
         }
 
-        const cedula = extractCedula(metafieldIdentification?.value);
+        const newCedula = extractCedula(metafieldIdentification?.value);
         const contifico = clientContifico(apiKey);
         const params = new URLSearchParams();
         params.append('identificacion', identification);
@@ -67,13 +67,24 @@ export const action = async ({ request }: ActionFunctionArgs) => {
                 es_vendedor: false,
                 es_proveedor: false,
                 es_extranjero: false,
-                cedula,
+                cedula:newCedula,
                 email: emailCustomer,
             };
             await contifico.createPerson(apiToken, cliente);
         }else {
             const { cedula, razon_social, telefonos, direccion, tipo, email, es_cliente, es_vendedor, es_proveedor, es_extranjero }:any = resultPeople.pop();
-            cliente = {cedula, razon_social, telefonos, direccion, tipo, email, es_cliente, es_vendedor, es_proveedor, es_extranjero};
+            cliente = {
+                cedula: cedula ? cedula : newCedula,
+                razon_social,
+                telefonos,
+                direccion,
+                tipo,
+                email,
+                es_cliente,
+                es_vendedor,
+                es_proveedor,
+                es_extranjero
+            };
         }
         const items = lineItems.nodes  ?? [];
         const shippingItemCode = codeShipping ? generateCodeShipping(codeShipping) : null;
@@ -117,7 +128,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
             }
 
             const price = Number(productData?.pvp1) ?? 0;
-            ratePercentage = Number(tax?.ratePercentage) ?? 0;
+            ratePercentage = Number(tax?.ratePercentage) || productData?.porcentaje_iva || 0;
             const percentageDiscount = 0.00;
             const basePrice = (+price * quantity) - percentageDiscount;
 
@@ -125,7 +136,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
             
             const base_gravable = ratePercentage > 12 ?  (basePrice - ((percentageDiscount / 100 ) * basePrice)) : 0.00;
             const base_cero = base_gravable ? 0.00 : basePrice;
-            const base_no_gravable = ratePercentage > 12 ? 0.00 : (basePrice - ((percentageDiscount / 100 ) * basePrice));
+            let base_no_gravable = ratePercentage > 12 ? 0.00 : (basePrice - ((percentageDiscount / 100 ) * basePrice));
+            base_no_gravable = Number(base_no_gravable.toFixed(2));
 
             detalles = [
                 ...detalles,
@@ -133,7 +145,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
                     producto_id: productData?.id,
                     cantidad: quantity,
                     precio: price,
-                    porcentaje_iva: tax?.ratePercentage,
+                    porcentaje_iva: ratePercentage,
                     porcentaje_descuento: percentageDiscount,
                     base_cero,
                     base_gravable,
@@ -159,7 +171,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
                 subtotal += porcentajeIva ? basePrice : 0;
                 const base_gravable = porcentajeIva > 12 ?  basePrice : 0.00;
                 const base_cero = base_gravable ? 0.00 : basePrice;
-                const base_no_gravable = ratePercentage > 12 ? 0.00 : basePrice;
+                let base_no_gravable = ratePercentage > 12 ? 0.00 : basePrice;
+                base_no_gravable = Number(base_no_gravable.toFixed(2));
 
 
                 detalles = [
@@ -210,7 +223,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
             cliente,
             descripcion: `Número de pedido ${nameOrder}`,
             subtotal_0: 0.0,
-            subtotal_12: subtotal,
+            subtotal_12: Number(subtotal.toFixed(2)),
             iva: Number(valueIva.toFixed(2)),
             total:Number(total.toFixed(2)),
             detalles
